@@ -165,7 +165,7 @@ class worker(Command):
         celery worker --autoscale=10,0
     """
     doc = __MODULE_DOC__  # parse help from this too
-    namespace = 'celeryd'
+    namespace = 'worker'
     enable_config_from_cmdline = True
     supports_args = False
 
@@ -192,7 +192,7 @@ class worker(Command):
         # Pools like eventlet/gevent needs to patch libs as early
         # as possible.
         pool_cls = (concurrency.get_implementation(pool_cls) or
-                    self.app.conf.CELERYD_POOL)
+                    self.app.conf.worker_pool)
         if self.app.IS_WINDOWS and kwargs.get('beat'):
             self.die('-B option does not work on Windows.  '
                      'Please run celery beat as a separate service.')
@@ -223,27 +223,27 @@ class worker(Command):
         conf = self.app.conf
         return (
             Option('-c', '--concurrency',
-                   default=conf.CELERYD_CONCURRENCY, type='int'),
-            Option('-P', '--pool', default=conf.CELERYD_POOL, dest='pool_cls'),
+                   default=conf.worker_concurrency, type='int'),
+            Option('-P', '--pool', default=conf.worker_pool, dest='pool_cls'),
             Option('--purge', '--discard', default=False, action='store_true'),
-            Option('-l', '--loglevel', default=conf.CELERYD_LOG_LEVEL),
+            Option('-l', '--loglevel', default='WARN'),
             Option('-n', '--hostname'),
             Option('-B', '--beat', action='store_true'),
             Option('-s', '--schedule', dest='schedule_filename',
-                   default=conf.CELERYBEAT_SCHEDULE_FILENAME),
+                   default=conf.beat_schedule_filename),
             Option('--scheduler', dest='scheduler_cls'),
             Option('-S', '--statedb',
-                   default=conf.CELERYD_STATE_DB, dest='state_db'),
-            Option('-E', '--events', default=conf.CELERY_SEND_EVENTS,
+                   default=conf.worker_state_db, dest='state_db'),
+            Option('-E', '--events', default=conf.worker_send_events,
                    action='store_true', dest='send_events'),
             Option('--time-limit', type='float', dest='task_time_limit',
-                   default=conf.CELERYD_TASK_TIME_LIMIT),
+                   default=conf.task_time_limit),
             Option('--soft-time-limit', dest='task_soft_time_limit',
-                   default=conf.CELERYD_TASK_SOFT_TIME_LIMIT, type='float'),
+                   default=conf.task_soft_time_limit, type='float'),
             Option('--maxtasksperchild', dest='max_tasks_per_child',
-                   default=conf.CELERYD_MAX_TASKS_PER_CHILD, type='int'),
+                   default=conf.worker_max_tasks_per_child, type='int'),
             Option('--prefetch-multiplier', dest='prefetch_multiplier',
-                   default=conf.CELERYD_PREFETCH_MULTIPLIER, type='int'),
+                   default=conf.worker_prefetch_multiplier, type='int'),
             Option('--queues', '-Q', default=[]),
             Option('--exclude-queues', '-X', default=[]),
             Option('--include', '-I', default=[]),

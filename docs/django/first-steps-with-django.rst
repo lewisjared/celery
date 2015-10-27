@@ -106,7 +106,7 @@ of your installed apps, following the ``tasks.py`` convention::
 
 
 This way you do not have to manually add the individual modules
-to the :setting:`CELERY_IMPORTS` setting.  The ``lambda`` so that the
+to the :setting:`CELERY_IMPORTS <imports>` setting.  The ``lambda`` so that the
 autodiscovery can happen only when needed, and so that importing your
 module will not evaluate the Django settings object.
 
@@ -176,7 +176,7 @@ To use this with your project you need to follow these four steps:
     .. code-block:: python
 
         app.conf.update(
-            CELERY_RESULT_BACKEND='djcelery.backends.database:DatabaseBackend',
+            result_backend='djcelery.backends.database:DatabaseBackend',
         )
 
     For the cache backend you can use:
@@ -184,7 +184,7 @@ To use this with your project you need to follow these four steps:
     .. code-block:: python
 
         app.conf.update(
-            CELERY_RESULT_BACKEND='djcelery.backends.cache:CacheBackend',
+            result_backend='djcelery.backends.cache:CacheBackend',
         )
 
     If you have connected Celery to your Django settings then you can

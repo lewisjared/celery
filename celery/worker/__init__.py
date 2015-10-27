@@ -46,15 +46,15 @@ SHUTDOWN_SOCKET_TIMEOUT = 5.0
 
 SELECT_UNKNOWN_QUEUE = """\
 Trying to select queue subset of {0!r}, but queue {1} is not
-defined in the CELERY_QUEUES setting.
+defined in the `task_queues` setting.
 
 If you want to automatically declare unknown queues you can
-enable the CELERY_CREATE_MISSING_QUEUES setting.
+enable the `task_create_missing_queues` setting.
 """
 
 DESELECT_UNKNOWN_QUEUE = """\
 Trying to deselect queue subset of {0!r}, but queue {1} is not
-defined in the CELERY_QUEUES setting.
+defined in the `task_queues` setting.
 """
 
 
@@ -180,20 +180,20 @@ class WorkController(object):
         except KeyError as exc:
             raise ImproperlyConfigured(
                 DESELECT_UNKNOWN_QUEUE.format(exclude, exc))
-        if self.app.conf.CELERY_WORKER_DIRECT:
+        if self.app.conf.worker_direct:
             self.app.amqp.queues.select_add(worker_direct(self.hostname))
 
     def setup_includes(self, includes):
         # Update celery_include to have all known task modules, so that we
         # ensure all task modules are imported in case an execv happens.
-        prev = tuple(self.app.conf.CELERY_INCLUDE)
+        prev = tuple(self.app.conf.include)
         if includes:
             prev += tuple(includes)
             [self.app.loader.import_task_module(m) for m in includes]
         self.include = includes
         task_modules = {task.__class__.__module__
                         for task in values(self.app.tasks)}
-        self.app.conf.CELERY_INCLUDE = tuple(set(prev) | task_modules)
+        self.app.conf.include = tuple(set(prev) | task_modules)
 
     def prepare_args(self, **kwargs):
         return kwargs
@@ -353,8 +353,8 @@ class WorkController(object):
                        max_tasks_per_child=None, prefetch_multiplier=None,
                        disable_rate_limits=None, worker_lost_wait=None, **_kw):
         self.concurrency = self._getopt('concurrency', concurrency)
-        self.loglevel = self._getopt('log_level', loglevel)
-        self.logfile = self._getopt('log_file', logfile)
+        self.loglevel = loglevel
+        self.logfile = logfile
         self.send_events = self._getopt('send_events', send_events)
         self.pool_cls = self._getopt('pool', pool_cls)
         self.consumer_cls = self._getopt('consumer', consumer_cls)
@@ -370,7 +370,7 @@ class WorkController(object):
             'schedule_filename', schedule_filename,
         )
         self.scheduler_cls = self._getopt(
-            'celerybeat_scheduler', scheduler_cls,
+            'beat_scheduler', scheduler_cls,
         )
         self.task_time_limit = self._getopt(
             'task_time_limit', task_time_limit,
@@ -388,10 +388,10 @@ class WorkController(object):
             'disable_rate_limits', disable_rate_limits,
         )
         self.worker_lost_wait = self._getopt(
-            'worker_lost_wait', worker_lost_wait,
+            'lost_wait', worker_lost_wait,
         )
 
     def _getopt(self, key, value):
         if value is not None:
             return value
-        return self.app.conf.find_value_for_key(key, namespace='celeryd')
+        return self.app.conf.find_value_for_key(key, namespace='worker')

@@ -84,10 +84,10 @@ class beat(Command):
         return (
             (Option('--detach', action='store_true'),
              Option('-s', '--schedule',
-                    default=c.CELERYBEAT_SCHEDULE_FILENAME),
+                    default=c.beat_schedule_filename),
              Option('--max-interval', type='float'),
              Option('-S', '--scheduler', dest='scheduler_cls'),
-             Option('-l', '--loglevel', default=c.CELERYBEAT_LOG_LEVEL)) +
+             Option('-l', '--loglevel', default='WARN')) +
             daemon_options(default_pidfile='celerybeat.pid') +
             tuple(self.app.user_options['beat'])
         )

@@ -60,28 +60,14 @@ class Settings(ConfigurationView):
     """
 
     @property
-    def CELERY_RESULT_BACKEND(self):
-        return self.first('CELERY_RESULT_BACKEND', 'CELERY_BACKEND')
-
-    @property
-    def BROKER_TRANSPORT(self):
-        return self.first('BROKER_TRANSPORT',
-                          'BROKER_BACKEND', 'CARROT_BACKEND')
-
-    @property
-    def BROKER_BACKEND(self):
-        """Deprecated compat alias to :attr:`BROKER_TRANSPORT`."""
-        return self.BROKER_TRANSPORT
-
-    @property
-    def BROKER_URL(self):
+    def broker_url(self):
         return (os.environ.get('CELERY_BROKER_URL') or
-                self.first('BROKER_URL', 'BROKER_HOST'))
+                self.first('broker_url', 'broker_host'))
 
     @property
-    def CELERY_TIMEZONE(self):
+    def timezone(self):
         # this way we also support django's time zone.
-        return self.first('CELERY_TIMEZONE', 'TIME_ZONE')
+        return self.first('timezone', 'time_zone')
 
     def without_defaults(self):
         """Return the current configuration, but without defaults."""
@@ -91,18 +77,18 @@ class Settings(ConfigurationView):
     def value_set_for(self, key):
         return key in self.without_defaults()
 
-    def find_option(self, name, namespace='celery'):
+    def find_option(self, name, namespace=''):
         """Search for option by name.
 
         Will return ``(namespace, key, type)`` tuple, e.g.::
 
             >>> from proj.celery import app
             >>> app.conf.find_option('disable_rate_limits')
-            ('CELERY', 'DISABLE_RATE_LIMITS',
+            ('worker', 'prefetch_multiplier',
              <Option: type->bool default->False>))
 
         :param name: Name of option, cannot be partial.
-        :keyword namespace: Preferred namespace (``CELERY`` by default).
+        :keyword namespace: Preferred namespace (``None`` by default).
 
         """
         return find(name, namespace)
@@ -117,7 +103,7 @@ class Settings(ConfigurationView):
         Example::
 
             >>> from proj.celery import app
-            >>> app.conf.get_by_parts('CELERY', 'DISABLE_RATE_LIMITS')
+            >>> app.conf.get_by_parts('worker', 'disable_rate_limits')
             False
 
         """
@@ -185,10 +171,10 @@ def filter_hidden_settings(conf):
         if isinstance(key, string_t):
             if HIDDEN_SETTINGS.search(key):
                 return mask
-            elif 'BROKER_URL' in key.upper():
+            elif 'broker_url' in key.lower():
                 from kombu import Connection
                 return Connection(value).as_uri(mask=mask)
-            elif key.upper() in ('CELERY_RESULT_BACKEND', 'CELERY_BACKEND'):
+            elif 'backend' in key.lower():
                 return maybe_sanitize_url(value, mask=mask)
 
         return value
@@ -220,7 +206,7 @@ def bugreport(app):
         py_v=_platform.python_version(),
         driver_v=driver_v,
         transport=transport,
-        results=app.conf.CELERY_RESULT_BACKEND or 'disabled',
+        results=app.conf.result_backend or 'disabled',
         human_settings=app.conf.humanize(),
         loader=qualname(app.loader.__class__),
     )

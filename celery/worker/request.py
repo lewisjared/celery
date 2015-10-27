@@ -419,7 +419,7 @@ class Request(object):
     @property
     def tzlocal(self):
         if self._tzlocal is None:
-            self._tzlocal = self.app.conf.CELERY_TIMEZONE
+            self._tzlocal = self.app.conf.timezone
         return self._tzlocal
 
     @property

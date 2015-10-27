@@ -57,7 +57,7 @@ If you depend on pickle then you should set a setting to disable this
 warning and to be sure that everything will continue working
 when you upgrade to Celery 4.0::
 
-    CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+    accept_content = ['pickle', 'json', 'msgpack', 'yaml']
 
 You must only enable the serializers that you will actually use.
 
@@ -120,7 +120,7 @@ class Worker(WorkController):
             sender=self.hostname, instance=self,
             conf=self.app.conf, options=kwargs,
         )
-        check_privileges(self.app.conf.CELERY_ACCEPT_CONTENT)
+        check_privileges(self.app.conf.accept_content)
 
     def on_after_init(self, purge=False, no_color=None,
                       redirect_stdouts=None, redirect_stdouts_level=None,
@@ -158,7 +158,7 @@ class Worker(WorkController):
             sender=self.hostname, instance=self, conf=self.app.conf,
         )
 
-        if not self.app.conf.value_set_for('CELERY_ACCEPT_CONTENT'):
+        if not self.app.conf.value_set_for('accept_content'):
             warnings.warn(CDeprecationWarning(W_PICKLE_DEPRECATED))
 
         if self.purge:
@@ -229,7 +229,7 @@ class Worker(WorkController):
             version=VERSION_BANNER,
             conninfo=self.app.connection().as_uri(),
             results=maybe_sanitize_url(
-                self.app.conf.CELERY_RESULT_BACKEND or 'disabled',
+                self.app.conf.result_backend or 'disabled',
             ),
             concurrency=concurrency,
             platform=safe_str(_platform.platform()),

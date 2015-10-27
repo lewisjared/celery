@@ -451,6 +451,7 @@ class ConfigurationView(AttributeDictMixin):
     :param defaults: List of dicts containing the default configuration.
 
     """
+    key_t = None
     changes = None
     defaults = None
     _order = None
@@ -465,6 +466,7 @@ class ConfigurationView(AttributeDictMixin):
         self._order.insert(1, d)
 
     def __getitem__(self, key):
+        key = self.key_t(key) if self.key_t is not None else key
         for d in self._order:
             try:
                 return d[key]
@@ -473,12 +475,14 @@ class ConfigurationView(AttributeDictMixin):
         raise KeyError(key)
 
     def __setitem__(self, key, value):
+        key = self.key_t(key) if self.key_t is not None else key
         self.changes[key] = value
 
     def first(self, *keys):
         return first(None, (self.get(key) for key in keys))
 
     def get(self, key, default=None):
+        key = self.key_t(key) if self.key_t is not None else key
         try:
             return self[key]
         except KeyError:
@@ -489,6 +493,7 @@ class ConfigurationView(AttributeDictMixin):
         self.changes.clear()
 
     def setdefault(self, key, default):
+        key = self.key_t(key) if self.key_t is not None else key
         try:
             return self[key]
         except KeyError:
@@ -499,6 +504,7 @@ class ConfigurationView(AttributeDictMixin):
         return self.changes.update(*args, **kwargs)
 
     def __contains__(self, key):
+        key = self.key_t(key) if self.key_t is not None else key
         return any(key in m for m in self._order)
 
     def __bool__(self):

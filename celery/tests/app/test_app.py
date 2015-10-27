@@ -225,7 +225,7 @@ class test_App(AppCase):
     @with_environ('CELERY_BROKER_URL', '')
     def test_with_broker(self):
         with self.Celery(broker='foo://baribaz') as app:
-            self.assertEqual(app.conf.BROKER_URL, 'foo://baribaz')
+            self.assertEqual(app.conf.broker_url, 'foo://baribaz')
 
     def test_repr(self):
         self.assertTrue(repr(self.app))
@@ -236,7 +236,7 @@ class test_App(AppCase):
 
     def test_include_argument(self):
         with self.Celery(include=('foo', 'bar.foo')) as app:
-            self.assertEqual(app.conf.CELERY_IMPORTS, ('foo', 'bar.foo'))
+            self.assertEqual(app.conf.imports, ('foo', 'bar.foo'))
 
     def test_set_as_current(self):
         current = _state._tls.current_app
@@ -324,7 +324,7 @@ class test_App(AppCase):
                 return fun(*args, **kwargs)
             return _inner
 
-        self.app.conf.CELERY_ANNOTATIONS = {
+        self.app.conf.task_annotations = {
             adX.name: {'@__call__': deco}
         }
         adX.bind(self.app)
@@ -428,44 +428,34 @@ class test_App(AppCase):
         self.assert_config2()
 
     def test_config_from_cmdline(self):
-        cmdline = ['.always_eager=no',
-                   '.result_backend=/dev/null',
-                   'celeryd.prefetch_multiplier=368',
+        cmdline = ['task_always_eager=no',
+                   'result_backend=/dev/null',
+                   'worker_prefetch_multiplier=368',
                    '.foobarstring=(string)300',
                    '.foobarint=(int)300',
-                   '.result_engine_options=(dict){"foo": "bar"}']
-        self.app.config_from_cmdline(cmdline, namespace='celery')
-        self.assertFalse(self.app.conf.CELERY_ALWAYS_EAGER)
-        self.assertEqual(self.app.conf.CELERY_RESULT_BACKEND, '/dev/null')
-        self.assertEqual(self.app.conf.CELERYD_PREFETCH_MULTIPLIER, 368)
-        self.assertEqual(self.app.conf.CELERY_FOOBARSTRING, '300')
-        self.assertEqual(self.app.conf.CELERY_FOOBARINT, 300)
-        self.assertDictEqual(self.app.conf.CELERY_RESULT_ENGINE_OPTIONS,
+                   'sqlalchemy_engine_options=(dict){"foo": "bar"}']
+        self.app.config_from_cmdline(cmdline, namespace='worker')
+        self.assertFalse(self.app.conf.task_always_eager)
+        self.assertEqual(self.app.conf.result_backend, '/dev/null')
+        self.assertEqual(self.app.conf.worker_prefetch_multiplier, 368)
+        self.assertEqual(self.app.conf.worker_foobarstring, '300')
+        self.assertEqual(self.app.conf.worker_foobarint, 300)
+        self.assertDictEqual(self.app.conf.sqlalchemy_engine_options,
                              {'foo': 'bar'})
 
-    def test_compat_setting_CELERY_BACKEND(self):
-        self.app._preconf = {}
-        self.app.conf.defaults[0]['CELERY_RESULT_BACKEND'] = None
-        self.app.config_from_object(Object(CELERY_BACKEND='set_by_us'))
-        self.assertEqual(self.app.conf.CELERY_RESULT_BACKEND, 'set_by_us')
-
-    def test_setting_BROKER_TRANSPORT_OPTIONS(self):
+    def test_setting__broker_transport_options(self):
 
         _args = {'foo': 'bar', 'spam': 'baz'}
 
         self.app.config_from_object(Object())
-        self.assertEqual(self.app.conf.BROKER_TRANSPORT_OPTIONS, {})
+        self.assertEqual(self.app.conf.broker_transport_options, {})
 
-        self.app.config_from_object(Object(BROKER_TRANSPORT_OPTIONS=_args))
-        self.assertEqual(self.app.conf.BROKER_TRANSPORT_OPTIONS, _args)
+        self.app.config_from_object(Object(broker_transport_options=_args))
+        self.assertEqual(self.app.conf.broker_transport_options, _args)
 
     def test_Windows_log_color_disabled(self):
         self.app.IS_WINDOWS = True
         self.assertFalse(self.app.log.supports_color(True))
-
-    def test_compat_setting_CARROT_BACKEND(self):
-        self.app.config_from_object(Object(CARROT_BACKEND='set_by_us'))
-        self.assertEqual(self.app.conf.BROKER_TRANSPORT, 'set_by_us')
 
     def test_WorkController(self):
         x = self.app.WorkController
@@ -537,9 +527,9 @@ class test_App(AppCase):
                 return args, kwargs
 
         self.app.loader = Loader(app=self.app)
-        self.app.conf.ADMINS = None
+        self.app.conf.admins = None
         self.assertFalse(self.app.mail_admins('Subject', 'Body'))
-        self.app.conf.ADMINS = [('George Costanza', 'george@vandelay.com')]
+        self.app.conf.admins = [('George Costanza', 'george@vandelay.com')]
         self.assertTrue(self.app.mail_admins('Subject', 'Body'))
 
     def test_amqp_get_broker_info(self):
@@ -550,8 +540,8 @@ class test_App(AppCase):
              'virtual_host': '/'},
             self.app.connection('pyamqp://').info(),
         )
-        self.app.conf.BROKER_PORT = 1978
-        self.app.conf.BROKER_VHOST = 'foo'
+        self.app.conf.broker_port = 1978
+        self.app.conf.broker_vhost = 'foo'
         self.assertDictContainsSubset(
             {'port': 1978, 'virtual_host': 'foo'},
             self.app.connection('pyamqp://:1978/foo').info(),
@@ -563,14 +553,14 @@ class test_App(AppCase):
     def test_amqp_failover_strategy_selection(self):
         # Test passing in a string and make sure the string
         # gets there untouched
-        self.app.conf.BROKER_FAILOVER_STRATEGY = 'foo-bar'
+        self.app.conf.broker_failover_strategy = 'foo-bar'
         self.assertEqual(
             self.app.connection('amqp:////value').failover_strategy,
             'foo-bar',
         )
 
         # Try passing in None
-        self.app.conf.BROKER_FAILOVER_STRATEGY = None
+        self.app.conf.broker_failover_strategy = None
         self.assertEqual(
             self.app.connection('amqp:////value').failover_strategy,
             itertools.cycle,
@@ -580,15 +570,11 @@ class test_App(AppCase):
         def my_failover_strategy(it):
             yield True
 
-        self.app.conf.BROKER_FAILOVER_STRATEGY = my_failover_strategy
+        self.app.conf.broker_failover_strategy = my_failover_strategy
         self.assertEqual(
             self.app.connection('amqp:////value').failover_strategy,
             my_failover_strategy,
         )
-
-    def test_BROKER_BACKEND_alias(self):
-        self.assertEqual(self.app.conf.BROKER_BACKEND,
-                         self.app.conf.BROKER_TRANSPORT)
 
     def test_after_fork(self):
         p = self.app._pool = Mock()

@@ -117,7 +117,7 @@ class Celery(object):
                      Default is :class:`celery.loaders.app.AppLoader`.
     :keyword backend: The result store backend class, or the name of the
                       backend class to use. Default is the value of the
-                      :setting:`CELERY_RESULT_BACKEND` setting.
+                      :setting:`result_backend` setting.
     :keyword amqp: AMQP object or class name.
     :keyword events: Events object or class name.
     :keyword log: Log object or class name.
@@ -217,11 +217,11 @@ class Celery(object):
         # simplify pickling of the app object.
         self._preconf = changes or {}
         if broker:
-            self._preconf['BROKER_URL'] = broker
+            self._preconf['broker_url'] = broker
         if backend:
-            self._preconf['CELERY_RESULT_BACKEND'] = backend
+            self._preconf['result_backend'] = backend
         if include:
-            self._preconf['CELERY_IMPORTS'] = include
+            self._preconf['imports'] = include
 
         # - Apply fixups.
         self.fixups = set(self.builtin_fixups) if fixups is None else fixups
@@ -505,15 +505,15 @@ class Celery(object):
         :keyword allowed_serializers: List of serializer names, or
             content_types that should be exempt from being disabled.
         :keyword key: Name of private key file to use.
-            Defaults to the :setting:`CELERY_SECURITY_KEY` setting.
+            Defaults to the :setting:`security_key` setting.
         :keyword cert: Name of certificate file to use.
-            Defaults to the :setting:`CELERY_SECURITY_CERTIFICATE` setting.
+            Defaults to the :setting:`security_certificate` setting.
         :keyword store: Directory containing certificates.
-            Defaults to the :setting:`CELERY_SECURITY_CERT_STORE` setting.
+            Defaults to the :setting:`security_cert_store` setting.
         :keyword digest: Digest algorithm used when signing messages.
             Default is ``sha1``.
         :keyword serializer: Serializer used to encode messages after
-            they have been signed.  See :setting:`CELERY_TASK_SERIALIZER` for
+            they have been signed.  See :setting:`task_serializer` for
             the serializers supported.
             Default is ``json``.
 
@@ -603,9 +603,9 @@ class Celery(object):
         producer = producer or publisher  # XXX compat
         router = router or amqp.router
         conf = self.conf
-        if conf.CELERY_ALWAYS_EAGER:  # pragma: no cover
+        if conf.task_always_eager:  # pragma: no cover
             warnings.warn(AlwaysEagerIgnored(
-                'CELERY_ALWAYS_EAGER has no effect on send_task',
+                'task_always_eager has no effect on send_task',
             ), stacklevel=2)
         options = router.route(options, route_name or name, args, kwargs)
 
@@ -614,7 +614,7 @@ class Celery(object):
             expires, retries, chord,
             maybe_list(link), maybe_list(link_error),
             reply_to or self.oid, time_limit, soft_time_limit,
-            self.conf.CELERY_SEND_TASK_SENT_EVENT,
+            self.conf.task_send_sent_event,
             root_id, parent_id, shadow,
         )
 
@@ -646,8 +646,8 @@ class Celery(object):
         :keyword password: Password to authenticate with
         :keyword virtual_host: Virtual host to use (domain).
         :keyword port: Port to connect to.
-        :keyword ssl: Defaults to the :setting:`BROKER_USE_SSL` setting.
-        :keyword transport: defaults to the :setting:`BROKER_TRANSPORT`
+        :keyword ssl: Defaults to the :setting:`broker_use_ssl` setting.
+        :keyword transport: defaults to the :setting:`broker_transport`
                  setting.
 
         :returns :class:`kombu.Connection`:
@@ -655,23 +655,23 @@ class Celery(object):
         """
         conf = self.conf
         return self.amqp.Connection(
-            hostname or conf.BROKER_URL,
-            userid or conf.BROKER_USER,
-            password or conf.BROKER_PASSWORD,
-            virtual_host or conf.BROKER_VHOST,
-            port or conf.BROKER_PORT,
-            transport=transport or conf.BROKER_TRANSPORT,
-            ssl=self.either('BROKER_USE_SSL', ssl),
+            hostname or conf.broker_url,
+            userid or conf.broker_user,
+            password or conf.broker_password,
+            virtual_host or conf.broker_vhost,
+            port or conf.broker_port,
+            transport=transport or conf.broker_transport,
+            ssl=self.either('broker_use_ssl', ssl),
             heartbeat=heartbeat,
-            login_method=login_method or conf.BROKER_LOGIN_METHOD,
+            login_method=login_method or conf.broker_login_method,
             failover_strategy=(
-                failover_strategy or conf.BROKER_FAILOVER_STRATEGY
+                failover_strategy or conf.broker_failover_strategy
             ),
             transport_options=dict(
-                conf.BROKER_TRANSPORT_OPTIONS, **transport_options or {}
+                conf.broker_transport_options, **transport_options or {}
             ),
             connect_timeout=self.either(
-                'BROKER_CONNECTION_TIMEOUT', connect_timeout
+                'broker_connection_timeout', connect_timeout
             ),
         )
     broker_connection = connection
@@ -712,24 +712,24 @@ class Celery(object):
     def now(self):
         """Return the current time and date as a
         :class:`~datetime.datetime` object."""
-        return self.loader.now(utc=self.conf.CELERY_ENABLE_UTC)
+        return self.loader.now(utc=self.conf.enable_utc)
 
     def mail_admins(self, subject, body, fail_silently=False):
-        """Sends an email to the admins in the :setting:`ADMINS` setting."""
+        """Sends an email to the admins in the :setting:`admins` setting."""
         conf = self.conf
-        if conf.ADMINS:
-            to = [admin_email for _, admin_email in conf.ADMINS]
+        if conf.admins:
+            to = [admin_email for _, admin_email in conf.admins]
             return self.loader.mail_admins(
                 subject, body, fail_silently, to=to,
-                sender=conf.SERVER_EMAIL,
-                host=conf.EMAIL_HOST,
-                port=conf.EMAIL_PORT,
-                user=conf.EMAIL_HOST_USER,
-                password=conf.EMAIL_HOST_PASSWORD,
-                timeout=conf.EMAIL_TIMEOUT,
-                use_ssl=conf.EMAIL_USE_SSL,
-                use_tls=conf.EMAIL_USE_TLS,
-                charset=conf.EMAIL_CHARSET,
+                sender=conf.server_email,
+                host=conf.email_host,
+                port=conf.email_port,
+                user=conf.email_host_user,
+                password=conf.email_host_password,
+                timeout=conf.email_timeout,
+                use_ssl=conf.email_use_ssl,
+                use_tls=conf.email_use_tls,
+                charset=conf.email_charset,
             )
 
     def select_queues(self, queues=None):
@@ -751,7 +751,7 @@ class Celery(object):
     def _get_backend(self):
         from celery.backends import get_backend_by_url
         backend, url = get_backend_by_url(
-            self.backend_cls or self.conf.CELERY_RESULT_BACKEND,
+            self.backend_cls or self.conf.result_backend,
             self.loader)
         return backend(app=self, url=url)
 
@@ -830,7 +830,7 @@ class Celery(object):
         }
 
     def _add_periodic_task(self, key, entry):
-        self._conf.CELERYBEAT_SCHEDULE[key] = entry
+        self._conf.beat_schedule[key] = entry
 
     def create_task_cls(self):
         """Creates a base task class using default configuration
@@ -938,7 +938,7 @@ class Celery(object):
 
     @cached_property
     def annotations(self):
-        return prepare_annotations(self.conf.CELERY_ANNOTATIONS)
+        return prepare_annotations(self.conf.task_annotations)
 
     @cached_property
     def AsyncResult(self):
@@ -981,7 +981,7 @@ class Celery(object):
         """
         if self._pool is None:
             _ensure_after_fork()
-            limit = self.conf.BROKER_POOL_LIMIT
+            limit = self.conf.broker_pool_limit
             self._pool = self.connection().Pool(limit=limit)
         return self._pool
 
@@ -1056,14 +1056,14 @@ class Celery(object):
         """Current timezone for this app.
 
         This is a cached property taking the time zone from the
-        :setting:`CELERY_TIMEZONE` setting.
+        :setting:`timezone` setting.
 
         """
         from celery.utils.timeutils import timezone
         conf = self.conf
-        tz = conf.CELERY_TIMEZONE
+        tz = conf.timezone
         if not tz:
-            return (timezone.get_timezone('UTC') if conf.CELERY_ENABLE_UTC
+            return (timezone.get_timezone('UTC') if conf.enable_utc
                     else timezone.local)
-        return timezone.get_timezone(conf.CELERY_TIMEZONE)
+        return timezone.get_timezone(conf.timezone)
 App = Celery  # compat

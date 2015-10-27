@@ -125,11 +125,11 @@ class Worker(WorkController):
     def on_after_init(self, purge=False, no_color=None,
                       redirect_stdouts=None, redirect_stdouts_level=None,
                       **kwargs):
-        self.redirect_stdouts = self._getopt(
-            'redirect_stdouts', redirect_stdouts,
+        self.redirect_stdouts = self.app.either(
+            'worker_redirect_stdouts', redirect_stdouts,
         )
-        self.redirect_stdouts_level = self._getopt(
-            'redirect_stdouts_level', redirect_stdouts_level,
+        self.redirect_stdouts_level = self.app.either(
+            'worker_redirect_stdouts_level', redirect_stdouts_level,
         )
         super(Worker, self).setup_defaults(**kwargs)
         self.purge = purge

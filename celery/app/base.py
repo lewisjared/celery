@@ -17,7 +17,7 @@ from copy import deepcopy
 from operator import attrgetter
 from functools import wraps
 
-from amqp import promise
+from amqp import starpromise
 try:
     from billiard.util import register_after_fork
 except ImportError:
@@ -559,8 +559,8 @@ class Celery(object):
         """
         if force:
             return self._autodiscover_tasks(packages, related_name)
-        signals.import_modules.connect(promise(
-            self._autodiscover_tasks, (packages, related_name),
+        signals.import_modules.connect(starpromise(
+            self._autodiscover_tasks, packages, related_name,
         ), weak=False, sender=self)
 
     def _autodiscover_tasks(self, packages, related_name, **kwargs):
@@ -741,7 +741,9 @@ class Celery(object):
     def either(self, default_key, *values):
         """Fallback to the value of a configuration key if none of the
         `*values` are true."""
-        return first(None, values) or self.conf.get(default_key)
+        return first(None, [
+            first(None, values), starpromise(self.conf.get, default_key),
+        ])
 
     def bugreport(self):
         """Return a string with information useful for the Celery core

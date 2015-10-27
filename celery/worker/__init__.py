@@ -352,46 +352,37 @@ class WorkController(object):
                        task_time_limit=None, task_soft_time_limit=None,
                        max_tasks_per_child=None, prefetch_multiplier=None,
                        disable_rate_limits=None, worker_lost_wait=None, **_kw):
-        self.concurrency = self._getopt('concurrency', concurrency)
+        either = self.app.either
         self.loglevel = loglevel
         self.logfile = logfile
-        self.send_events = self._getopt('send_events', send_events)
-        self.pool_cls = self._getopt('pool', pool_cls)
-        self.consumer_cls = self._getopt('consumer', consumer_cls)
-        self.timer_cls = self._getopt('timer', timer_cls)
-        self.timer_precision = self._getopt('timer_precision', timer_precision)
-        self.autoscaler_cls = self._getopt('autoscaler', autoscaler_cls)
-        self.autoreloader_cls = self._getopt('autoreloader', autoreloader_cls)
-        self.pool_putlocks = self._getopt('pool_putlocks', pool_putlocks)
-        self.pool_restarts = self._getopt('pool_restarts', pool_restarts)
-        self.force_execv = self._getopt('force_execv', force_execv)
-        self.state_db = self._getopt('state_db', state_db)
-        self.schedule_filename = self._getopt(
-            'schedule_filename', schedule_filename,
+
+        self.concurrency = either('worker_concurrency', concurrency)
+        self.send_events = either('worker_send_events', send_events)
+        self.pool_cls = either('worker_pool', pool_cls)
+        self.consumer_cls = either('worker_consumer', consumer_cls)
+        self.timer_cls = either('worker_timer', timer_cls)
+        self.timer_precision = either('worker_timer_precision', timer_precision)
+        self.autoscaler_cls = either('worker_autoscaler', autoscaler_cls)
+        self.autoreloader_cls = either('worker_autoreloader', autoreloader_cls)
+        self.pool_putlocks = either('worker_pool_putlocks', pool_putlocks)
+        self.pool_restarts = either('worker_pool_restarts', pool_restarts)
+        self.force_execv = either('worker_force_execv', force_execv)
+        self.state_db = either('worker_state_db', state_db)
+        self.schedule_filename = either(
+            'beat_schedule_filename', schedule_filename,
         )
-        self.scheduler_cls = self._getopt(
-            'beat_scheduler', scheduler_cls,
-        )
-        self.task_time_limit = self._getopt(
-            'task_time_limit', task_time_limit,
-        )
-        self.task_soft_time_limit = self._getopt(
+        self.scheduler_cls = either('beat_scheduler', scheduler_cls)
+        self.task_time_limit = either('task_time_limit', task_time_limit)
+        self.task_soft_time_limit = either(
             'task_soft_time_limit', task_soft_time_limit,
         )
-        self.max_tasks_per_child = self._getopt(
-            'max_tasks_per_child', max_tasks_per_child,
+        self.max_tasks_per_child = either(
+            'worker_max_tasks_per_child', max_tasks_per_child,
         )
-        self.prefetch_multiplier = int(self._getopt(
-            'prefetch_multiplier', prefetch_multiplier,
+        self.prefetch_multiplier = int(either(
+            'worker_prefetch_multiplier', prefetch_multiplier,
         ))
-        self.disable_rate_limits = self._getopt(
-            'disable_rate_limits', disable_rate_limits,
+        self.disable_rate_limits = either(
+            'worker_disable_rate_limits', disable_rate_limits,
         )
-        self.worker_lost_wait = self._getopt(
-            'lost_wait', worker_lost_wait,
-        )
-
-    def _getopt(self, key, value):
-        if value is not None:
-            return value
-        return self.app.conf.find_value_for_key(key, namespace='worker')
+        self.worker_lost_wait = either('worker_lost_wait', worker_lost_wait)
